@@ -5,6 +5,7 @@ module mod_sort
   implicit none
 
   integer, parameter :: max_simple_sort_size = 20
+
 contains
 
   subroutine parallel_sort (A, order)
@@ -66,68 +67,6 @@ contains
        i = i + 1
     end do
   end subroutine parallel_sort
-
-  recursive subroutine sort (A, order, left, right)
-    integer, intent(in), dimension(:)          :: A
-    integer, intent(inout), dimension(size(A)) :: order
-
-    integer, intent(in) :: left, right
-
-    integer :: tmp, i, j, ref
-
-    if (left < right + max_simple_sort_size) then
-       call interchange_sort(A, order, left, right)
-    else
-       ref = A((left + right) / 2)
-       i = left
-       j = right
-
-       do while (i <= j)
-          ! find first ≥ than ref
-          do while(A(order(i)) >= ref)
-             i = i + 1
-          end do
-
-          ! find last ≤ ref
-          do while(A(order(j)) <= ref)
-             j = j - 1
-          end do
-
-          ! swap them if required
-          if (i < j) then
-             tmp = order(i)
-             order(i) = order(j)
-             order(j) = tmp
-          else if (i == j) then
-             i = i + 1
-          end if
-       end do
-       ! now i >= j, recursive call with that
-       if (left < j)  call sort(A, order, left, j)
-       if (i < right) call sort(A, order, i, right)
-    end if
-
-  end subroutine sort
-
-  subroutine interchange_sort (A, order, left, right)
-    integer, intent(in), dimension(:) :: A
-    integer, intent(inout), dimension(size(A)) :: order
-
-    integer, intent(in) :: left, right
-
-    integer :: i, j, tmp
-
-    do i = left, right - 1
-       do j = i+1, right
-          if (A(order(i)) > A(order(j))) then
-             tmp      = order(i)
-             order(i) = order(j)
-             order(j) = tmp
-          end if
-       end do
-    end do
-
-  end subroutine interchange_sort
 
   !> Merge two parts of A, ordered by order from left to right
   !! around middle.
