@@ -1,37 +1,17 @@
-program mod_sort
+module mod_sort
   use omp_lib
   use m_mrgrnk
 
-  integer, parameter :: N = int(1e8)
-  integer :: A(N), order(N), order2(N)
+  implicit none
+
   integer, parameter :: max_simple_sort_size = 20
-  real :: before, after
-
-  do i = 1, N
-     A(i) = N - 2*i
-  end do
-
-  write(*, *) 'Before'
-  if (N < 20) write(*, '(*(i5))') A
-
-  before = omp_get_wtime()
-  call parallel_sort(A, order)
-  write(*, *) 'parallel sort:', omp_get_wtime() - before
-
-  before = omp_get_wtime()
-  call mrgrnk(A, order2)
-  write(*, *) 'mrgrnk:       ', omp_get_wtime() - before
-
-  write(*, *) 'After', all(A(order) == A(order2))
-  if (N < 20) write(*, '(*(i5))') A(order)
-
 contains
 
   subroutine parallel_sort (A, order)
     integer, intent(in),  dimension(:) :: A
     integer, intent(out), dimension(size(A)) :: order
 
-    integer :: len, from, to, nthreads, thread, chunk, i
+    integer :: len, from, middle, to, nthreads, thread, chunk, chunk2, i
 
     len      = size(A)
     nthreads = omp_get_max_threads()
@@ -93,7 +73,7 @@ contains
 
     integer, intent(in) :: left, right
 
-    integer :: tmp
+    integer :: tmp, i, j, ref
 
     if (left < right + max_simple_sort_size) then
        call interchange_sort(A, order, left, right)
@@ -158,7 +138,7 @@ contains
     integer, intent(in) :: left, middle, right
 
     integer :: leftA, rightA, leftB, rightB
-    integer :: iA, iB
+    integer :: iA, iB, i
     integer :: lenA, lenB
 
     integer, dimension(left    :middle) :: orderA
@@ -209,96 +189,5 @@ contains
 
   end subroutine merge
 
-  subroutine quick_sort(list, order)
-    ! quick sort routine from:
-    ! brainerd, w.s., goldberg, c.h. & adams, j.c. (1990) "programmer's guide to
-    ! fortran 90", mcgraw-hill  isbn 0-07-000248-7, pages 149-150.
-    ! modified by alan miller to include an associated integer array which gives
-    ! the positions of the elements in the original order.
-    integer, parameter :: i8b = 8
+end module mod_sort
 
-    integer, dimension (:), intent(inout)        :: list
-    integer, dimension (size(list)), intent(out) :: order
-
-    integer :: n
-    ! local variable
-    integer :: i
-
-    n = size(list)
-    do i = 1, n
-       order(i) = i
-    end do
-
-    call quick_sort_1(list, order, 1, n)
-  end subroutine quick_sort
-
-  recursive subroutine quick_sort_1(list, order, left_end, right_end)
-    integer, dimension (:), intent(inout)          :: list
-    integer, dimension (size(list)), intent(inout) :: order
-
-    integer, intent(in) :: left_end, right_end
-
-    !     local variables
-    integer             :: i, j, itemp
-    integer             :: reference, temp
-
-    if (right_end < left_end + max_simple_sort_size) then
-       ! use interchange sort for small lists
-       call interchange_sort_1(list, order, left_end, right_end)
-
-    else
-       ! use partition ("quick") sort
-       reference = list((left_end + right_end)/2)
-       i = left_end - 1; j = right_end + 1
-
-       do
-          ! scan list from left end until element >= reference is found
-          do
-             i = i + 1
-             if (list(order(i)) >= reference) exit
-          end do
-          ! scan list from right end until element <= reference is found
-          do
-             j = j - 1
-             if (list(order(j)) <= reference) exit
-          end do
-
-
-          if (i < j) then
-             ! swap two out-of-order elements
-             itemp = order(i); order(i) = order(j); order(j) = itemp
-          else if (i == j) then
-             i = i + 1
-             exit
-          else
-             exit
-          end if
-       end do
-
-       if (left_end < j) call quick_sort_1(list, order, left_end, j)
-       if (i < right_end) call quick_sort_1(list, order, i, right_end)
-    end if
-
-  end subroutine quick_sort_1
-
-  subroutine interchange_sort_1(list, order, left_end, right_end)
-    integer, dimension (:), intent(inout)        :: list
-    integer, dimension (size(list)), intent(out) :: order
-
-    integer, intent(in) :: left_end, right_end
-
-    !     local variables
-    integer :: i, j, itemp
-    integer :: temp
-
-    do i = left_end, right_end - 1
-       do j = i+1, right_end
-          if (list(order(i)) > list(order(j))) then
-             itemp = order(i); order(i) = order(j); order(j) = itemp
-          end if
-       end do
-    end do
-
-  end subroutine interchange_sort_1
-
-end program mod_sort
