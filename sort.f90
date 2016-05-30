@@ -1,5 +1,24 @@
-module mod_sort
+program mod_sort
   use omp_lib
+  use m_mrgrnk
+
+  integer, parameter :: N = int(1e8)
+  integer :: A(N), order(N)
+  integer, parameter :: max_simple_sort_size = 20
+
+  do i = 1, N
+     A(i) = N - 2*i
+  end do
+
+  write(*, *) 'Before'
+  if (N < 20) write(*, '(*(i5))') A
+  ! call parallel_sort(A, order)
+  call quick_sort(A, order)
+
+  write(*, *) 'After'
+  if (N < 20) write(*, '(*(i5))') A(order)
+  ! write(*, '(*(i5))') order
+
 contains
 
   subroutine parallel_sort (A, order)
@@ -9,7 +28,7 @@ contains
     integer :: len, from, to, nthreads, thread, chunk, i
 
     len      = size(A)
-    nthreads = omp_get_num_threads()
+    nthreads = omp_get_max_threads()
     chunk    = len / nthreads
 
     !----------------------------------------
@@ -23,16 +42,22 @@ contains
     ! Sort each chunk
     !----------------------------------------
     !$OMP parallel do default(none) &
-    !$OMP private(from, to) shared(A, order) &
-    !$OMP firstprivate(len, nthreads)
+    !$OMP shared(A, order) private(from, to) &
+    !$OMP shared(chunk, len)
     do thread = 0, nthreads - 1
        from = thread           * chunk + 1
        to   = min((thread + 1) * chunk, len)
 
-       call sort(A(from:to), order(from:to))
-    end do
-    !$OMP end parallel
+       write(*, *) omp_get_thread_num(), omp_get_wtime()
 
+       call mrgrnk(A(from:to), order(from:to))
+       order(from:to) = order(from:to) + from - 1
+
+       write(*, *) omp_get_thread_num(), omp_get_wtime()
+    end do
+    !$OMP end parallel do
+
+    ! write(*, *) omp_get_wtime()
     !----------------------------------------
     ! Merge pieces together
     !----------------------------------------
@@ -45,24 +70,24 @@ contains
           to     = min((thread + 2**i) * chunk, len) ! thread + 2*2**i
 
           if (middle < to) then
-             call merge(order(from:middle), order(middle+1:to))
+             call merge(A, order, from, middle, to)
           end if
        end do
        i = i + 1
     end do
+    ! write(*, *) omp_get_wtime()
   end subroutine parallel_sort
 
-  subroutine sort (A, order)
-    integer, intent(in), dimension(:)        :: A
+  recursive subroutine sort (A, order, left, right)
+    integer, intent(in), dimension(:)          :: A
     integer, intent(inout), dimension(size(A)) :: order
 
-    integer :: left, right, tmp
+    integer, intent(in) :: left, right
 
-    left  = lbound(A)
-    right = ubound(A)
+    integer :: tmp
 
     if (left < right + max_simple_sort_size) then
-       call interchange_sort(A, order)
+       call interchange_sort(A, order, left, right)
     else
        ref = A((left + right) / 2)
        i = left
@@ -89,21 +114,19 @@ contains
           end if
        end do
        ! now i >= j, recursive call with that
-       if (left < j)  call sort(A(left:j), order(left:j))
-       if (i < right) call sort(A(i:right), order(right:i))
+       if (left < j)  call sort(A, order, left, j)
+       if (i < right) call sort(A, order, i, right)
     end if
 
   end subroutine sort
 
-  subroutine interchange_sort (A, order)
+  subroutine interchange_sort (A, order, left, right)
     integer, intent(in), dimension(:) :: A
     integer, intent(inout), dimension(size(A)) :: order
 
-    integer :: left, right
-    integer :: i, j, tmp
+    integer, intent(in) :: left, right
 
-    left = lbound(A)
-    right = ubound(A)
+    integer :: i, j, tmp
 
     do i = left, right - 1
        do j = i+1, right
@@ -117,5 +140,153 @@ contains
 
   end subroutine interchange_sort
 
+  !> Merge two parts of A, ordered by order from left to right
+  !! around middle.
+  subroutine merge (A, order, left, middle, right)
+    integer, intent(in), dimension(:) :: A
+    integer, intent(inout), dimension(size(A)) :: order
 
-end module mod_sort
+    integer, intent(in) :: left, middle, right
+
+    integer :: leftA, rightA, leftB, rightB
+    integer :: iA, iB
+    integer :: lenA, lenB
+
+    integer, dimension(left    :middle) :: orderA
+    integer, dimension(middle+1:right ) :: orderB
+
+    ! copy order
+    orderA = order(left    :middle)
+    orderB = order(middle+1:right)
+
+    ! more explicit variables
+    leftA  = left
+    rightA = middle
+    leftB  = middle+1
+    rightB = right
+
+    ! initialize iA, iB to their leftmost position
+    iA = leftA
+    iB = leftB
+
+    i = leftA
+    do while ((iA <= rightA) .and. (iB <= rightB))
+       if (A(orderA(iA)) <= A(orderB(iB))) then
+          order(i) = orderA(iA)
+          iA = iA + 1
+       else
+          order(i) = orderB(iB)
+          iB = iB + 1
+       end if
+       i = i + 1
+    end do
+
+    ! either A or B still have elements, append them to the new order
+    do while (iA <= rightA)
+       order(i) = orderA(iA)
+       iA = iA + 1
+       i  = i + 1
+    end do
+    do while (iB <= rightB)
+       order(i) = orderB(iB)
+       iB = iB + 1
+       i  = i + 1
+    end do
+
+  end subroutine merge
+
+  subroutine quick_sort(list, order)
+    ! quick sort routine from:
+    ! brainerd, w.s., goldberg, c.h. & adams, j.c. (1990) "programmer's guide to
+    ! fortran 90", mcgraw-hill  isbn 0-07-000248-7, pages 149-150.
+    ! modified by alan miller to include an associated integer array which gives
+    ! the positions of the elements in the original order.
+    integer, parameter :: i8b = 8
+
+    integer, dimension (:), intent(inout)        :: list
+    integer, dimension (size(list)), intent(out) :: order
+
+    integer :: n
+    ! local variable
+    integer :: i
+
+    n = size(list)
+    do i = 1, n
+       order(i) = i
+    end do
+
+    call quick_sort_1(list, order, 1, n)
+  end subroutine quick_sort
+
+  recursive subroutine quick_sort_1(list, order, left_end, right_end)
+    integer, dimension (:), intent(inout)          :: list
+    integer, dimension (size(list)), intent(inout) :: order
+
+    integer, intent(in) :: left_end, right_end
+
+    !     local variables
+    integer             :: i, j, itemp
+    integer             :: reference, temp
+
+    if (right_end < left_end + max_simple_sort_size) then
+       ! use interchange sort for small lists
+       call interchange_sort_1(list, order, left_end, right_end)
+
+    else
+       ! use partition ("quick") sort
+       reference = list((left_end + right_end)/2)
+       i = left_end - 1; j = right_end + 1
+
+       do
+          ! scan list from left end until element >= reference is found
+          do
+             i = i + 1
+             if (list(i) >= reference) exit
+          end do
+          ! scan list from right end until element <= reference is found
+          do
+             j = j - 1
+             if (list(j) <= reference) exit
+          end do
+
+
+          if (i < j) then
+             ! swap two out-of-order elements
+             temp = list(i); list(i) = list(j); list(j) = temp
+             itemp = order(i); order(i) = order(j); order(j) = itemp
+          else if (i == j) then
+             i = i + 1
+             exit
+          else
+             exit
+          end if
+       end do
+
+       if (left_end < j) call quick_sort_1(list, order, left_end, j)
+       if (i < right_end) call quick_sort_1(list, order, i, right_end)
+    end if
+
+  end subroutine quick_sort_1
+
+  subroutine interchange_sort_1(list, order, left_end, right_end)
+    integer, dimension (:), intent(inout)        :: list
+    integer, dimension (size(list)), intent(out) :: order
+
+    integer, intent(in) :: left_end, right_end
+
+    !     local variables
+    integer :: i, j, itemp
+    integer :: temp
+
+    do i = left_end, right_end - 1
+       do j = i+1, right_end
+          if (list(i) > list(j)) then
+             temp = list(i); list(i) = list(j); list(j) = temp
+             itemp = order(i); order(i) = order(j); order(j) = itemp
+          end if
+       end do
+    end do
+
+  end subroutine interchange_sort_1
+
+end program mod_sort
