@@ -5,7 +5,8 @@ A fortran library to perform parallel sorts.
 Download the library in any working directory.
 
 ## Compile
-You need to compile both `mrgrnk.f90` and `sort.f90`. To use, simply use `mod_sort` in your fortran files.
+You need to compile both `mrgrnk.f90` and `sort.f90`. The latter has to be compiled against openmp (e.g. with `gfortran`, do `gfortran -fopenmp sort.f90 -c sort.o`.
+To use, simply use `mod_sort` in your fortran files.
 
 ## Doc
 ### parallel_sort
