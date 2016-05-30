@@ -5,7 +5,8 @@ module mod_sort
   implicit none
 
   integer, parameter :: max_simple_sort_size = 20
-
+  private
+  public :: parallel_sort
 contains
 
   subroutine parallel_sort (A, order)
