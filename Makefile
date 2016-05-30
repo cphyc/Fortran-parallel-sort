@@ -1,6 +1,6 @@
 FC=gfortran
-LFLAGS=-fopenmp -g
-CFLAGS=-O3 -fopenmp -g
+LFLAGS=-fopenmp
+CFLAGS=-O3 -fopenmp
 
 all: test
 
