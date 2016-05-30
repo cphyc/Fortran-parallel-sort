@@ -6,7 +6,7 @@ program sort_test
   implicit none
 
 
-  integer, parameter :: N = int(1e8)
+  integer, parameter :: N = int(1e7)
   integer :: A(N), order(N), order2(N), i
   real :: before, after
 
