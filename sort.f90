@@ -3,8 +3,9 @@ program mod_sort
   use m_mrgrnk
 
   integer, parameter :: N = int(1e8)
-  integer :: A(N), order(N)
+  integer :: A(N), order(N), order2(N)
   integer, parameter :: max_simple_sort_size = 20
+  real :: before, after
 
   do i = 1, N
      A(i) = N - 2*i
@@ -12,12 +13,17 @@ program mod_sort
 
   write(*, *) 'Before'
   if (N < 20) write(*, '(*(i5))') A
-  ! call parallel_sort(A, order)
-  call quick_sort(A, order)
 
-  write(*, *) 'After'
+  before = omp_get_wtime()
+  call parallel_sort(A, order)
+  write(*, *) 'parallel sort:', omp_get_wtime() - before
+
+  before = omp_get_wtime()
+  call mrgrnk(A, order2)
+  write(*, *) 'mrgrnk:       ', omp_get_wtime() - before
+
+  write(*, *) 'After', all(A(order) == A(order2))
   if (N < 20) write(*, '(*(i5))') A(order)
-  ! write(*, '(*(i5))') order
 
 contains
 
@@ -43,39 +49,42 @@ contains
     !----------------------------------------
     !$OMP parallel do default(none) &
     !$OMP shared(A, order) private(from, to) &
-    !$OMP shared(chunk, len)
-    do thread = 0, nthreads - 1
+    !$OMP shared(chunk, len, nthreads)
+    do thread = 0, nthreads
        from = thread           * chunk + 1
        to   = min((thread + 1) * chunk, len)
-
-       write(*, *) omp_get_thread_num(), omp_get_wtime()
 
        call mrgrnk(A(from:to), order(from:to))
        order(from:to) = order(from:to) + from - 1
 
-       write(*, *) omp_get_thread_num(), omp_get_wtime()
     end do
     !$OMP end parallel do
 
-    ! write(*, *) omp_get_wtime()
     !----------------------------------------
     ! Merge pieces together
     !----------------------------------------
     i = 1
-    do while ((1. * nthreads / 2**i) >= 1.)
-       !TODO: parallel
-       do thread = 0, (nthreads - 1) / 2**i
-          from   = thread              * chunk + 1   ! thread
-          middle = (thread + 2**(i-1)) * chunk       ! thread + 1*2**i
-          to     = min((thread + 2**i) * chunk, len) ! thread + 2*2**i
+    chunk2 = chunk
+    do while (chunk2 < size(A))
 
-          if (middle < to) then
+       !$OMP parallel do default(none)  &
+       !$OMP shared(chunk2, A, order)   &
+       !$OMP private(from, middle, to)
+       do thread = 0, ceiling(.5 * size(A) / chunk2)
+          from   = thread*2     * chunk2 + 1
+          middle = (thread*2+1) * chunk2
+          to     = (thread*2+2) * chunk2
+
+          middle = min(middle, size(A))
+          to     = min(to, size(A))
+          if (from < to) then
              call merge(A, order, from, middle, to)
           end if
        end do
+       !$OMP end parallel do
+       chunk2 = chunk2 * 2
        i = i + 1
     end do
-    ! write(*, *) omp_get_wtime()
   end subroutine parallel_sort
 
   recursive subroutine sort (A, order, left, right)
@@ -170,6 +179,7 @@ contains
     iB = leftB
 
     i = leftA
+
     do while ((iA <= rightA) .and. (iB <= rightB))
        if (A(orderA(iA)) <= A(orderB(iB))) then
           order(i) = orderA(iA)
@@ -178,6 +188,7 @@ contains
           order(i) = orderB(iB)
           iB = iB + 1
        end if
+
        i = i + 1
     end do
 
@@ -185,11 +196,14 @@ contains
     do while (iA <= rightA)
        order(i) = orderA(iA)
        iA = iA + 1
+
        i  = i + 1
+
     end do
     do while (iB <= rightB)
        order(i) = orderB(iB)
        iB = iB + 1
+
        i  = i + 1
     end do
 
@@ -241,18 +255,17 @@ contains
           ! scan list from left end until element >= reference is found
           do
              i = i + 1
-             if (list(i) >= reference) exit
+             if (list(order(i)) >= reference) exit
           end do
           ! scan list from right end until element <= reference is found
           do
              j = j - 1
-             if (list(j) <= reference) exit
+             if (list(order(j)) <= reference) exit
           end do
 
 
           if (i < j) then
              ! swap two out-of-order elements
-             temp = list(i); list(i) = list(j); list(j) = temp
              itemp = order(i); order(i) = order(j); order(j) = itemp
           else if (i == j) then
              i = i + 1
@@ -280,8 +293,7 @@ contains
 
     do i = left_end, right_end - 1
        do j = i+1, right_end
-          if (list(i) > list(j)) then
-             temp = list(i); list(i) = list(j); list(j) = temp
+          if (list(order(i)) > list(order(j))) then
              itemp = order(i); order(i) = order(j); order(j) = itemp
           end if
        end do
