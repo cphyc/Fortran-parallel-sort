@@ -2,7 +2,9 @@ FC=gfortran
 LFLAGS=-fopenmp -g
 CFLAGS=-O3 -fopenmp -g
 
-sort: sort.o mrgrnk.o
+all: test
+
+test: sort.o mrgrnk.o test.o
 	$(FC) $(LFLAGS) -o $@ $^
 
 %.o: %.f90
