@@ -1,4 +1,7 @@
-Module m_mrgrnk
+! From http://www.fortran-2000.com/rank/
+! ORDERPACK by: Michel Olagnon
+
+module m_mrgrnk
 Integer, Parameter :: kdp = selected_real_kind(15)
 public :: mrgrnk
 private :: kdp
