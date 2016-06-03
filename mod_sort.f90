@@ -29,9 +29,9 @@ contains
     !----------------------------------------
     ! Sort each chunk
     !----------------------------------------
-    !$OMP parallel do default(none)            &
-    !$OMP firsprivate(A, chunk, len, nthreads) &
-    !$OMP shared(order) private(from, to) 
+    !$OMP parallel do default(none)          &
+    !$OMP firstprivate(chunk, len, nthreads) &
+    !$OMP shared(A, order) private(from, to)
     do thread = 0, nthreads
        from = thread           * chunk + 1
        to   = min((thread + 1) * chunk, len)
@@ -130,4 +130,3 @@ contains
   end subroutine merge
 
 end module mod_sort
-
