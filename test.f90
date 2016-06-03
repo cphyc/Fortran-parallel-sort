@@ -1,26 +1,30 @@
-program sort_test
-  use omp_lib
+!> Test the parallel sort routine
+program test
+  use ISO_FORTRAN_ENV, only : ERROR_UNIT
   use mod_sort
   use m_mrgrnk
 
-  implicit none
+  integer, parameter :: N = int(1e6)
 
+  integer :: A(N), order(N), orderControl(N)
 
-  integer, parameter :: N = int(1e7)
-  integer :: A(N), order(N), order2(N), i
-  real :: before, after
+  integer :: i
+  logical :: ok
 
   do i = 1, N
      A(i) = N - 2*i
   end do
 
-  before = omp_get_wtime()
   call parallel_sort(A, order)
-  write(*, *) 'parallel sort     :', omp_get_wtime() - before
+  call mrgrnk(A, orderControl)
 
-  before = omp_get_wtime()
-  call mrgrnk(A, order2)
-  write(*, *) 'mrgrnk (reference):', omp_get_wtime() - before
+  ok = all(A(order) == A(orderControl))
 
-  write(*, *) 'comparing outputs (should print "T"):', all(A(order) == A(order2))
-end program sort_test
+  if (.not. ok) then
+     write(ERROR_UNIT, *) 'A(order) ≠ A(orderControl)'
+     stop 1
+  else
+     stop 0
+  end if
+
+end program test
