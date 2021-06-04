@@ -121,24 +121,40 @@ program Test_Sort_Parallel
 
 
   block
-    real :: tstart, tend
+    real(8) :: tstart, tend
     real(8), allocatable :: AA(:)
-    allocate(AA(1:100000000))
+    integer, allocatable :: Aorder(:)
+    integer :: Niter = 10
+    integer(kind=8) :: count, count_rate, count_max
+
+    allocate(AA(1:1000000))
+    allocate(Aorder(1:size(AA)))
     call random_number(AA)
 
-    call CPU_TIME(tstart)
-    do i = 1, 10000
-      call mrgrnk(A, order)
-    end do
-    call CPU_TIME(tend)
-    print*, "mrgrnk took", (tend-tstart)*100, "us"
+    !-------------- Time serial version --------------
+    call system_clock(count, count_rate=count_rate, count_max=count_max)
+    tstart = count * 1d0 / count_rate
 
-    call CPU_TIME(tstart)
-    do i = 1, 10000
-      call parallel_sort(A, order)
+    do i = 1, Niter
+      call mrgrnk(AA, Aorder)
     end do
-    call CPU_TIME(tend)
-    print*, "parallel sort took", (tend-tstart)*100, "us"
+    call system_clock(count, count_rate=count_rate, count_max=count_max)
+    tend = count * 1d0 / count_rate
+
+    print*, "mrgrnk took", (tend-tstart)/Niter*1000, "ms/iter"
+
+    !-------------- Time parallel version --------------
+    call system_clock(count, count_rate=count_rate, count_max=count_max)
+    tstart = count * 1d0 / count_rate
+
+    do i = 1, Niter
+      call parallel_sort(AA, Aorder)
+    end do
+
+    call system_clock(count, count_rate=count_rate, count_max=count_max)
+    tend = count * 1d0 / count_rate
+
+    print*, "parallel sort took", (tend-tstart)/Niter*1000, "ms/iter"
   end block
 
   call exit(Nerr)
