@@ -4,6 +4,8 @@ program Test_Sort_Parallel
   use mod_sort
   use m_mrgrnk
 
+  implicit none
+
   integer, parameter :: N = 97 !95 !96 ! int(1e6) ! Arbitrary length of arrays
   integer, parameter :: Cwidth = 50        ! Arbitrary width of strings
 
@@ -124,19 +126,19 @@ program Test_Sort_Parallel
     allocate(AA(1:100000000))
     call random_number(AA)
 
-    call CPU_TIME(start)
+    call CPU_TIME(tstart)
     do i = 1, 10000
       call mrgrnk(A, order)
     end do
-    call CPU_TIME(end)
-    print*, "mrgrnk took", (end-start)*100, "us"
+    call CPU_TIME(tend)
+    print*, "mrgrnk took", (tend-tstart)*100, "us"
 
-    call CPU_TIME(start)
+    call CPU_TIME(tstart)
     do i = 1, 10000
       call parallel_sort(A, order)
     end do
-    call CPU_TIME(end)
-    print*, "parallel sort took", (end-start)*100, "us"
+    call CPU_TIME(tend)
+    print*, "parallel sort took", (tend-tstart)*100, "us"
   end block
 
   call exit(Nerr)
