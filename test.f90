@@ -7,7 +7,7 @@ program Test_Sort_Parallel
   integer, parameter :: N = 97 !95 !96 ! int(1e6) ! Arbitrary length of arrays
   integer, parameter :: Cwidth = 50        ! Arbitrary width of strings
 
-  integer :: A(N), order(N), orderSerial(N), irand(N, Cwidth) 
+  integer :: A(N), order(N), orderSerial(N), irand(N, Cwidth)
   real(8) :: dpA(N), xrand(N), yrand(N, Cwidth)
   real(4) :: spA(N)
   character(Cwidth) :: cA(N)
@@ -116,6 +116,28 @@ program Test_Sort_Parallel
      write(ERROR_UNIT, *) 'An error ocurred while sorting integers'
      Nerr = Nerr + 1
   end if
+
+
+  block
+    real :: tstart, tend
+    real(8), allocatable :: AA(:)
+    allocate(AA(1:100000000))
+    call random_number(AA)
+
+    call CPU_TIME(start)
+    do i = 1, 10000
+      call mrgrnk(A, order)
+    end do
+    call CPU_TIME(end)
+    print*, "mrgrnk took", (end-start)*100, "us"
+
+    call CPU_TIME(start)
+    do i = 1, 10000
+      call parallel_sort(A, order)
+    end do
+    call CPU_TIME(end)
+    print*, "parallel sort took", (end-start)*100, "us"
+  end block
 
   call exit(Nerr)
 

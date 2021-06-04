@@ -17,7 +17,7 @@ contains
     character(*), intent(in),  dimension(:) :: A
     integer, intent(out), dimension(size(A)) :: order
 
-    integer :: ilen, from, middle, ito, nthreads, thread, chunk, chunk2, i, iremainder, extraThread 
+    integer :: ilen, from, middle, ito, nthreads, thread, chunk, chunk2, i, iremainder, extraThread
 
     ilen      = size(A)
     nthreads = omp_get_max_threads()
@@ -28,19 +28,21 @@ contains
         extraThread = 1
     else
         extraThread = 0
-    endif   
+    endif
     !----------------------------------------
     ! Initialize order
     !----------------------------------------
+    !$OMP parallel do shared(order) schedule(static)
     do i = 1, ilen
        order(i) = i
     end do
+    !$OMP end parallel do
 
     !----------------------------------------
     ! Sort each chunk
     !----------------------------------------
-    !$OMP parallel do default(shared) private(thread, from, ito)
-    do thread = 0, nthreads-1 + extraThread 
+    !$OMP parallel do default(shared) private(thread, from, ito) schedule(guided)
+    do thread = 0, nthreads-1 + extraThread
        from = thread*chunk + 1
        ito  = min((thread + 1)*chunk, ilen)
 
@@ -138,7 +140,7 @@ contains
     real(8), intent(in),  dimension(:) :: A
     integer, intent(out), dimension(size(A)) :: order
 
-    integer :: ilen, from, middle, ito, nthreads, thread, chunk, chunk2, i, iremainder, extraThread 
+    integer :: ilen, from, middle, ito, nthreads, thread, chunk, chunk2, i, iremainder, extraThread
 
     ilen      = size(A)
     nthreads = omp_get_max_threads()
@@ -149,19 +151,21 @@ contains
         extraThread = 1
     else
         extraThread = 0
-    endif   
+    endif
     !----------------------------------------
     ! Initialize order
     !----------------------------------------
+    !$OMP parallel do shared(order)
     do i = 1, ilen
        order(i) = i
     end do
+    !$OMP end parallel do
 
     !----------------------------------------
     ! Sort each chunk
     !----------------------------------------
-    !$OMP parallel do default(shared) private(thread, from, ito)
-    do thread = 0, nthreads-1 + extraThread 
+    !$OMP parallel do default(shared) private(thread, from, ito) schedule(guided)
+    do thread = 0, nthreads-1 + extraThread
        from = thread*chunk + 1
        ito  = min((thread + 1)*chunk, ilen)
 
@@ -259,7 +263,7 @@ contains
     real(4), intent(in),  dimension(:) :: A
     integer, intent(out), dimension(size(A)) :: order
 
-    integer :: ilen, from, middle, ito, nthreads, thread, chunk, chunk2, i, iremainder, extraThread 
+    integer :: ilen, from, middle, ito, nthreads, thread, chunk, chunk2, i, iremainder, extraThread
 
     ilen      = size(A)
     nthreads = omp_get_max_threads()
@@ -270,19 +274,21 @@ contains
         extraThread = 1
     else
         extraThread = 0
-    endif   
+    endif
     !----------------------------------------
     ! Initialize order
     !----------------------------------------
+    !$OMP parallel do shared(order) schedule(static)
     do i = 1, ilen
        order(i) = i
     end do
+    !$OMP end parallel do
 
     !----------------------------------------
     ! Sort each chunk
     !----------------------------------------
-    !$OMP parallel do default(shared) private(thread, from, ito)
-    do thread = 0, nthreads-1 + extraThread 
+    !$OMP parallel do default(shared) private(thread, from, ito) schedule(guided)
+    do thread = 0, nthreads-1 + extraThread
        from = thread*chunk + 1
        ito  = min((thread + 1)*chunk, ilen)
 
@@ -380,7 +386,7 @@ contains
     integer, intent(in),  dimension(:) :: A
     integer, intent(out), dimension(size(A)) :: order
 
-    integer :: ilen, from, middle, ito, nthreads, thread, chunk, chunk2, i, iremainder, extraThread 
+    integer :: ilen, from, middle, ito, nthreads, thread, chunk, chunk2, i, iremainder, extraThread
 
     ilen      = size(A)
     nthreads = omp_get_max_threads()
@@ -391,7 +397,7 @@ contains
         extraThread = 1
     else
         extraThread = 0
-    endif   
+    endif
     !----------------------------------------
     ! Initialize order
     !----------------------------------------
@@ -403,7 +409,7 @@ contains
     ! Sort each chunk
     !----------------------------------------
     !$OMP parallel do default(shared) private(thread, from, ito)
-    do thread = 0, nthreads-1 + extraThread 
+    do thread = 0, nthreads-1 + extraThread
        from = thread*chunk + 1
        ito  = min((thread + 1)*chunk, ilen)
 
@@ -419,7 +425,7 @@ contains
     chunk2 = chunk
     do while (chunk2 < size(A))
 
-       !$OMP parallel do default(shared) private(thread, from, middle, ito)
+       !$OMP parallel do default(shared) private(thread, from, middle, ito) schedule(guided)
        do thread = 0, ceiling(.5 * size(A) / chunk2)
           from   = thread*2     * chunk2 + 1
           middle = (thread*2 + 1) * chunk2
