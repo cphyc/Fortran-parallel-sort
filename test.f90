@@ -1,5 +1,6 @@
 !> Test the parallel sort routine
 program Test_Sort_Parallel
+  use ISO_FORTRAN_ENV, only : ERROR_UNIT
   use mod_sort
   use m_mrgrnk
 
@@ -12,6 +13,9 @@ program Test_Sort_Parallel
   character(Cwidth) :: cA(N)
 
   integer :: i, j
+
+  logical :: ok
+  integer :: Nerr = 0
 !  ------------------------------------
   open(8, file = 'Sort_Parallel.log')
 !
@@ -42,7 +46,7 @@ program Test_Sort_Parallel
   call random_number(xrand(:))
 
   dpA(:) = 1.0d3 * xrand(:)
-  spA(:) = 1.0d3 * xrand(:)
+  spA(:) = real(dpA, 4)
   A(:) = nint(1.0d3 * xrand(:))
 !
 !  ------------------------------------
@@ -55,6 +59,12 @@ program Test_Sort_Parallel
   do i = 1, N
      write(8, '(1x,i8, 3(1x,a))') i, cA(i), cA(order(i)), cA(orderSerial(i))
   end do
+
+  ok = all(cA(order) == cA(orderSerial))
+  if (.not. ok) then
+     write(ERROR_UNIT, *) 'An error ocurred while sorting character strings'
+     Nerr = Nerr + 1
+  end if
 !
 !  ------------------------------------
 !  Parallel sort double precision
@@ -66,6 +76,12 @@ program Test_Sort_Parallel
   do i = 1, N
      write(8, '(1x,i8, 3(1x,G15.7))') i, dpA(i), dpA(order(i)), dpA(orderSerial(i))
   end do
+
+  ok = all(dpA(order) == dpA(orderSerial))
+  if (.not. ok) then
+     write(ERROR_UNIT, *) 'An error ocurred while sorting double precision floats'
+     Nerr = Nerr + 1
+  end if
 !
 !  ------------------------------------
 !  Parallel sort single precision
@@ -77,6 +93,12 @@ program Test_Sort_Parallel
   do i = 1, N
      write(8, '(1x,i8, 3(1x,G15.7))') i, spA(i), spA(order(i)), spA(orderSerial(i))
   end do
+
+  ok = all(spA(order) == spA(orderSerial))
+  if (.not. ok) then
+     write(ERROR_UNIT, *) 'An error ocurred while sorting single precision floats'
+     Nerr = Nerr + 1
+  end if
 !
 !  ------------------------------------
 !  Parallel sort integer
@@ -88,5 +110,13 @@ program Test_Sort_Parallel
   do i = 1, N
      write(8, *) i, A(i), A(order(i)), A(orderSerial(i))
   end do
+
+  ok = all(A(order) == A(orderSerial))
+  if (.not. ok) then
+     write(ERROR_UNIT, *) 'An error ocurred while sorting integers'
+     Nerr = Nerr + 1
+  end if
+
+  call exit(Nerr)
 
 end program Test_Sort_Parallel
