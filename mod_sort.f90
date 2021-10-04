@@ -22,6 +22,18 @@ contains
     ilen      = size(A)
     nthreads = omp_get_max_threads()
     chunk    = ilen / nthreads
+    !----------------------------------------
+    ! Perform sorting on tiny arrays in serial to avoid OpenMP overhead
+    !----------------------------------------
+    if (chunk < 1) then
+       do i = 1, ilen
+          order(i) = i
+       end do
+
+       call mrgrnk(A(:), order(:))
+       return
+    endif
+    !----------------------------------------
 
     iremainder = mod(ilen, nthreads)
     if (iremainder /= 0) then
@@ -145,6 +157,18 @@ contains
     ilen      = size(A)
     nthreads = omp_get_max_threads()
     chunk    = ilen / nthreads
+    !----------------------------------------
+    ! Perform sorting on tiny arrays in serial to avoid OpenMP overhead
+    !----------------------------------------
+    if (chunk < 1) then
+       do i = 1, ilen
+          order(i) = i
+       end do
+
+       call mrgrnk(A(:), order(:))
+       return
+    endif
+    !----------------------------------------
 
     iremainder = mod(ilen, nthreads)
     if (iremainder /= 0) then
@@ -268,6 +292,18 @@ contains
     ilen      = size(A)
     nthreads = omp_get_max_threads()
     chunk    = ilen / nthreads
+    !----------------------------------------
+    ! Perform sorting on tiny arrays in serial to avoid OpenMP overhead
+    !----------------------------------------
+    if (chunk < 1) then
+       do i = 1, ilen
+          order(i) = i
+       end do
+
+       call mrgrnk(A(:), order(:))
+       return
+    endif
+    !----------------------------------------
 
     iremainder = mod(ilen, nthreads)
     if (iremainder /= 0) then
@@ -391,6 +427,18 @@ contains
     ilen      = size(A)
     nthreads = omp_get_max_threads()
     chunk    = ilen / nthreads
+    !----------------------------------------
+    ! Perform sorting on tiny arrays in serial to avoid OpenMP overhead
+    !----------------------------------------
+    if (chunk < 1) then
+       do i = 1, ilen
+          order(i) = i
+       end do
+
+       call mrgrnk(A(:), order(:))
+       return
+    endif
+    !----------------------------------------
 
     iremainder = mod(ilen, nthreads)
     if (iremainder /= 0) then
