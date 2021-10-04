@@ -124,7 +124,7 @@ program Test_Sort_Parallel
 !  Check parallel sort for small arrays
 !  ------------------------------------
   block
-   real(8), allocatable :: A(:)
+   integer, allocatable :: A(:)
    integer, allocatable :: order(:), orderSerial(:)
    integer :: N
    do N = 1, 100
@@ -134,7 +134,6 @@ program Test_Sort_Parallel
          A(i) = N - i
       end do
 
-
       call parallel_sort(A, order)
       call mrgrnk(A, orderSerial)
 
@@ -142,10 +141,6 @@ program Test_Sort_Parallel
       if (.not. ok) then
          write(ERROR_UNIT, *) 'An error ocurred while sorting array with length', N
          Nerr = Nerr + 1
-         print*, "Parallel", "Serial"
-         do i = 1, N
-            print*, A(order(i)), A(orderSerial(i))
-         end do
       end if
       deallocate(A, order, orderSerial)
    end do
