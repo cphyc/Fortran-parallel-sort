@@ -1,10 +1,11 @@
 module mod_sort
+! Parallel sorting routines by: Corentin Cadiou and Steve Rivkin 
+
   use omp_lib
   use m_mrgrnk
 
   implicit none
 
-  integer, parameter :: max_simple_sort_size = 20
   private
   public :: parallel_sort
 
@@ -19,9 +20,9 @@ contains
 
     integer :: ilen, from, middle, ito, nthreads, thread, chunk, chunk2, i
 
-    ilen      = size(A)
+    ilen     = size(A)
     nthreads = omp_get_max_threads()
-    chunk    = ceiling(1d0 * ilen / nthreads)
+    chunk    = ceiling(dble(ilen) / nthreads)
 
     !----------------------------------------
     ! Initialize order
@@ -138,7 +139,7 @@ contains
 
     ilen      = size(A)
     nthreads = omp_get_max_threads()
-    chunk    = ceiling(1d0 * ilen / nthreads)
+    chunk    = ceiling(dble(ilen) / nthreads)
 
     !----------------------------------------
     ! Initialize order
@@ -255,7 +256,7 @@ contains
 
     ilen      = size(A)
     nthreads = omp_get_max_threads()
-    chunk    = ceiling(1d0 * ilen / nthreads)
+    chunk    = ceiling(dble(ilen) / nthreads)
 
     !----------------------------------------
     ! Initialize order
@@ -372,7 +373,7 @@ contains
 
     ilen      = size(A)
     nthreads = omp_get_max_threads()
-    chunk    = ceiling(1d0 * ilen / nthreads)
+    chunk    = ceiling(dble(ilen) / nthreads)
 
     !----------------------------------------
     ! Initialize order

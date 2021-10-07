@@ -1,5 +1,7 @@
 !> Test the parallel sort routine
 program Test_Sort_Parallel
+! Parallel sorting routines by: Corentin Cadiou and Steve Rivkin 
+
   use ISO_FORTRAN_ENV, only : ERROR_UNIT
   use mod_sort
   use m_mrgrnk
@@ -152,10 +154,13 @@ program Test_Sort_Parallel
 !  ------------------------------------
 
   block
-    real(8) :: tstart, tend
+    use omp_lib
+
+    real(8) :: tstart, tend, serial_time, parallel_time, speed_up, efficiency
     real(8), allocatable :: AA(:)
     integer, allocatable :: Aorder(:)
-    integer :: Niter = 10
+    integer :: Niter = 100
+    integer :: nthreads
     integer(kind=8) :: count, count_rate, count_max
 
     allocate(AA(1:1000000))
@@ -164,30 +169,43 @@ program Test_Sort_Parallel
 
     !-------------- Time serial version --------------
     call system_clock(count, count_rate=count_rate, count_max=count_max)
-    tstart = count * 1d0 / count_rate
+    tstart = dble(count) / count_rate
 
     do i = 1, Niter
       call mrgrnk(AA, Aorder)
     end do
     call system_clock(count, count_rate=count_rate, count_max=count_max)
-    tend = count * 1d0 / count_rate
+    tend = dble(count) / count_rate
 
-    print*, "mrgrnk took", (tend-tstart)/Niter*1000, "ms/iter"
+    serial_time = 1000*(tend-tstart) / Niter
+    print*, "mrgrnk took", serial_time, "ms/iter"
 
     !-------------- Time parallel version --------------
     call system_clock(count, count_rate=count_rate, count_max=count_max)
-    tstart = count * 1d0 / count_rate
+    tstart = dble(count) / count_rate
 
     do i = 1, Niter
       call parallel_sort(AA, Aorder)
     end do
 
     call system_clock(count, count_rate=count_rate, count_max=count_max)
-    tend = count * 1d0 / count_rate
+    tend = dble(count) / count_rate
 
-    print*, "parallel sort took", (tend-tstart)/Niter*1000, "ms/iter"
+    parallel_time = 1000*(tend-tstart) / Niter
+    print*, "parallel sort took", parallel_time, "ms/iter"
+
+    !-------------- Statistics -------------------------
+    speed_up = serial_time / parallel_time
+    print*, "speed up factor ", speed_up
+
+    nthreads = omp_get_max_threads()
+    print*, "using ", nthreads, " threads"
+
+    efficiency = speed_up / nthreads 
+    print*, "efficiency is ", 100*efficiency, "percent"
+    print*, "Note this assumes the serial version is unvectorized."
+    print*, "However it probably is auto-vectorized which contributes to the efficiency appearing low."
   end block
 
-  call exit(Nerr)
-
+  write(*, *) Nerr, " of 8 sorting algorithms have errors."
 end program Test_Sort_Parallel
